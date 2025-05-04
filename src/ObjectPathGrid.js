@@ -120,6 +120,8 @@ export const NumberGrid = ({ grid }) => {
           gridTemplateRows: `repeat(${grid[0].length}, 50px)`,
           gap: "2px",
           userSelect: "none",
+          marginTop: "20px",
+          marginBottom: "20px",
         }}
         onMouseUp={handleMouseUp}
       >

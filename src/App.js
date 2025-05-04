@@ -74,9 +74,9 @@ function App() {
 
   const [showAnswer, setShowAnswer] = useState(false);
 
-  useEffect(() => {
+  let createGame = () => {
     let [n, path] = generate_hamiltonian_path(1);
-    let originalPath = path.slice()
+    let originalPath = path.slice();
     setPath(originalPath);
 
     let start = [path[0][0], path[0][1], 1];
@@ -90,7 +90,6 @@ function App() {
 
     for (let j = 0; j < path.length; j++) {
       let minimum = true;
-      console.log("unique still");
 
       for (let i = path.length - 2; i > 0; i--) {
         let newPath = [...path];
@@ -105,17 +104,24 @@ function App() {
       if (minimum) break;
     }
 
-    console.log(currentGrid);
     setGrid(currentGrid);
+  };
+
+  useEffect(() => {
+    createGame();
   }, []);
+
   return (
     <div className="App">
       <header className="App-header">
-        <p>
-          Linkedin Zip Practice
-        </p>
+        <p>Linkedin Zip Practice</p>
         {grid && <NumberGrid grid={grid}></NumberGrid>}
-        <button onClick={() => setShowAnswer(!showAnswer)}>Show Answer</button>
+        <div>
+          <button onClick={() => setShowAnswer(!showAnswer)}>
+            Show Answer
+          </button>
+          <button onClick={() => createGame()}>New Game</button>
+        </div>
 
         {showAnswer && (
           <div>
