@@ -75,6 +75,9 @@ function App() {
   const [showAnswer, setShowAnswer] = useState(false);
 
   let createGame = () => {
+    setPath(null);
+    setShowAnswer(false);
+
     let [n, path] = generate_hamiltonian_path(1);
     let originalPath = path.slice();
     setPath(originalPath);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from "react";
 
 export const ObjectPathGrid = ({ path, cellSize = 40, showGrid = true }) => {
@@ -75,6 +75,11 @@ export const NumberGrid = ({ grid }) => {
       setMessage("YOU WON");
     }
   }, [path]);
+
+  useEffect(() => {
+    setPath([]);
+    setMessage("");
+  }, [grid]);
 
   const handleCellMouseEnter = (row, col) => {
     if (!isDragging) return;
