@@ -61,15 +61,33 @@ export const NumberGrid = ({ grid }) => {
   const [message, setMessage] = useState("");
   const [currentNumber, setCurrentNumber] = useState(1);
 
+  // --- Timer State ---
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isTimerActive, setIsTimerActive] = useState(true);
+
   const cellSize = 50;
   const gapSize = 6;
   const totalWidth = grid[0].length * cellSize + (grid[0].length - 1) * gapSize;
   const totalHeight = grid.length * cellSize + (grid.length - 1) * gapSize;
 
+  // --- Timer Logic ---
+  useEffect(() => {
+    let interval = null;
+    if (isTimerActive) {
+      interval = setInterval(() => {
+        setTimeElapsed((prevTime) => prevTime + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerActive]);
+
   useEffect(() => {
     if (path.length > 0 && path.length === grid.length * grid.length) {
       setMessage("Great work! You completed the path.");
       setIsDragging(false); // Stop dragging on win
+      setIsTimerActive(false); // Stop timer on win
     }
   }, [path, grid.length]);
 
@@ -77,7 +95,16 @@ export const NumberGrid = ({ grid }) => {
     setPath([]);
     setMessage("");
     setCurrentNumber(1);
+    setTimeElapsed(0); // Reset timer
+    setIsTimerActive(true); // Start timer
   }, [grid]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   const handleCellMouseDown = (row, col) => {
     // 1. Check if clicking on the very end of the current path to resume drawing
@@ -161,6 +188,17 @@ export const NumberGrid = ({ grid }) => {
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       
+      {/* Timer UI */}
+      <div style={{
+        fontSize: "20px",
+        fontWeight: "600",
+        color: isTimerActive ? "#0a66c2" : "#057642", // Turns green when won
+        marginBottom: "4px",
+        fontVariantNumeric: "tabular-nums", // Keeps character width consistent so text doesn't jitter
+      }}>
+        ⏱️ {formatTime(timeElapsed)}
+      </div>
+
       {/* Status Message Banner */}
       <div style={{
         height: "24px",
