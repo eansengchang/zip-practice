@@ -1,5 +1,3 @@
-
-
 import { generate_hamiltonian_path } from "./hamiltonian_path";
 import { ObjectPathGrid, NumberGrid } from "./ObjectPathGrid";
 import { useEffect, useState } from "react";
@@ -69,14 +67,49 @@ function App() {
   const [grid, setGrid] = useState(null);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  let createGame = () => {
+  let createGame = (forceNew = false) => {
     setPath(null);
     setShowAnswer(false);
 
+    // 1. Check if we have a compressed game in the URL
+    if (!forceNew) {
+      const hash = window.location.hash.slice(1);
+      if (hash && hash.includes("-")) {
+        try {
+          const [pathStr, maskStr] = hash.split("-");
+          
+          // Decode the single-character path
+          const decodedPath = [];
+          for (let i = 0; i < pathStr.length; i++) {
+            const val = parseInt(pathStr[i], 36);
+            decodedPath.push([Math.floor(val / SIZE), val % SIZE]);
+          }
+          
+          // Decode the bitmask for the grid
+          const bitMask = parseInt(maskStr, 36).toString(2).padStart(decodedPath.length, "0");
+          let decodedGrid = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+          
+          // FIX: Assign sequential clue numbers (1, 2, 3...) rather than path distances
+          let clueNumber = 1;
+          for (let i = 0; i < decodedPath.length; i++) {
+            if (bitMask[i] === "1") {
+              const [r, c] = decodedPath[i];
+              decodedGrid[r][c] = clueNumber++;
+            }
+          }
+
+          setPath(decodedPath);
+          setGrid(decodedGrid);
+          return; // Exit early, rendering the saved game
+        } catch (e) {
+          console.error("Failed to parse URL data. Generating new game instead.");
+        }
+      }
+    }
+
+    // 2. Generate a new game
     let [n, generatedPath] = generate_hamiltonian_path(1);
     let originalPath = generatedPath.slice();
-    setPath(originalPath);
-
     let start = [generatedPath[0][0], generatedPath[0][1], 1];
 
     let prevGrid = createGridFromPath(generatedPath);
@@ -102,7 +135,22 @@ function App() {
       if (minimum) break;
     }
 
+    setPath(originalPath);
     setGrid(currentGrid);
+
+    // 3. Ultra-short URL Encoding
+    // Encode path coordinates as base36 characters (0-35 map perfectly to 0-z)
+    const pathStr = originalPath.map(([r, c]) => (r * SIZE + c).toString(36)).join("");
+    
+    // Encode the grid as a binary string, then to base36
+    let bitStr = "";
+    for (let i = 0; i < originalPath.length; i++) {
+      const [r, c] = originalPath[i];
+      bitStr += currentGrid[r][c] !== 0 ? "1" : "0";
+    }
+    const maskStr = parseInt(bitStr, 2).toString(36);
+    
+    window.history.replaceState(null, "", `#${pathStr}-${maskStr}`);
   };
 
   useEffect(() => {
@@ -111,7 +159,7 @@ function App() {
 
   return (
     <div style={{
-      backgroundColor: "#f3f2ef", // LinkedIn warm gray background
+      backgroundColor: "#f3f2ef", 
       minHeight: "100vh",
       display: "flex",
       flexDirection: "column",
@@ -121,8 +169,8 @@ function App() {
     }}>
       <div style={{
         backgroundColor: "#ffffff",
-        borderRadius: "8px", // LinkedIn card radius
-        boxShadow: "0 0 0 1px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04)", // LinkedIn card shadow
+        borderRadius: "8px", 
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04)", 
         padding: "32px",
         width: "100%",
         maxWidth: "450px",
@@ -133,7 +181,7 @@ function App() {
         <h1 style={{
           fontSize: "24px",
           fontWeight: "600",
-          color: "rgba(0,0,0,0.9)", // LinkedIn dark text
+          color: "rgba(0,0,0,0.9)", 
           margin: "0 0 24px 0"
         }}>
           LinkedIn Zip Practice
@@ -155,7 +203,7 @@ function App() {
               padding: "10px 24px",
               borderRadius: "24px",
               backgroundColor: "transparent",
-              color: "#0a66c2", // LinkedIn Blue
+              color: "#0a66c2", 
               border: "1.5px solid #0a66c2",
               fontSize: "16px",
               fontWeight: "600",
@@ -166,12 +214,12 @@ function App() {
             {showAnswer ? "Hide Answer" : "Show Answer"}
           </button>
           <button 
-            onClick={() => createGame()}
+            onClick={() => createGame(true)} 
             style={{
               flex: 1,
               padding: "10px 24px",
               borderRadius: "24px",
-              backgroundColor: "#0a66c2", // LinkedIn Blue Primary
+              backgroundColor: "#0a66c2", 
               color: "#ffffff",
               border: "none",
               fontSize: "16px",
