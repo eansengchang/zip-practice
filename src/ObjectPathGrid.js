@@ -60,6 +60,7 @@ export const NumberGrid = ({ grid }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [message, setMessage] = useState("");
   const [currentNumber, setCurrentNumber] = useState(1);
+  const [copied, setCopied] = useState(false);
 
   // --- Timer State ---
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -69,6 +70,8 @@ export const NumberGrid = ({ grid }) => {
   const gapSize = 6;
   const totalWidth = grid[0].length * cellSize + (grid[0].length - 1) * gapSize;
   const totalHeight = grid.length * cellSize + (grid.length - 1) * gapSize;
+
+  const hasWon = path.length > 0 && path.length === grid.length * grid.length;
 
   // --- Timer Logic ---
   useEffect(() => {
@@ -84,12 +87,12 @@ export const NumberGrid = ({ grid }) => {
   }, [isTimerActive]);
 
   useEffect(() => {
-    if (path.length > 0 && path.length === grid.length * grid.length) {
+    if (hasWon) {
       setMessage("Great work! You completed the path.");
       setIsDragging(false); // Stop dragging on win
       setIsTimerActive(false); // Stop timer on win
     }
-  }, [path, grid.length]);
+  }, [hasWon]);
 
   useEffect(() => {
     setPath([]);
@@ -97,6 +100,7 @@ export const NumberGrid = ({ grid }) => {
     setCurrentNumber(1);
     setTimeElapsed(0); // Reset timer
     setIsTimerActive(true); // Start timer
+    setCopied(false); // Reset copy state
   }, [grid]);
 
   // Format time as MM:SS
@@ -107,6 +111,8 @@ export const NumberGrid = ({ grid }) => {
   };
 
   const handleCellMouseDown = (row, col) => {
+    if (hasWon) return; // Prevent interaction after winning
+
     // 1. Check if clicking on the very end of the current path to resume drawing
     if (path.length > 0) {
       const [lastRow, lastCol] = path[path.length - 1];
@@ -129,7 +135,7 @@ export const NumberGrid = ({ grid }) => {
   };
 
   const handleCellMouseEnter = (row, col) => {
-    if (!isDragging) return;
+    if (!isDragging || hasWon) return;
 
     const last = path[path.length - 1];
 
@@ -172,6 +178,14 @@ export const NumberGrid = ({ grid }) => {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleShare = () => {
+    const shareText = `I solved this zip in ${timeElapsed} seconds!\n\nPlay my exact board here:\n${window.location.href}`;
+    navigator.clipboard.writeText(shareText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const isInPath = (row, col) => path.some(([r, c]) => r === row && c === col);
@@ -264,7 +278,7 @@ export const NumberGrid = ({ grid }) => {
                     backgroundColor: active ? "transparent" : "#ffffff", 
                     border: active ? "none" : "2px solid #e6e9ec",
                     borderRadius: "8px", 
-                    cursor: "pointer",
+                    cursor: hasWon ? "default" : "pointer",
                     transition: "background-color 0.1s ease-in-out"
                   }}
                 >
@@ -291,6 +305,30 @@ export const NumberGrid = ({ grid }) => {
           )}
         </div>
       </div>
+
+      {/* Win State / Share Button */}
+      {hasWon && (
+        <button
+          onClick={handleShare}
+          style={{
+            marginTop: "24px",
+            padding: "10px 24px",
+            borderRadius: "24px",
+            backgroundColor: copied ? "#057642" : "#ffffff",
+            color: copied ? "#ffffff" : "#057642",
+            border: "1.5px solid #057642",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}
+        >
+          {copied ? "✅ Copied to Clipboard!" : "📤 Share Result"}
+        </button>
+      )}
     </div>
   );
 };
