@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { NumberGrid } from "./components/NumberGrid";
 import { SolutionGrid } from "./components/SolutionGrid";
+import { HowToPlay } from "./components/HowToPlay";
 import { Button } from "./components/Button";
 import { generatePuzzle } from "./lib/puzzle";
 import { decodePuzzleFromHash, encodePuzzleToHash } from "./lib/urlCodec";
@@ -19,7 +20,7 @@ const styles = {
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
-    boxShadow: "0 0 0 1px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04)",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.5)",
     padding: "32px",
     width: "100%",
     maxWidth: "450px",
@@ -81,12 +82,19 @@ function App() {
     createGame();
   }, [createGame]);
 
+  // The browser's default body margin shows the page's white background as a
+  // border around our dark layout. Zero it and match the background instead.
+  useEffect(() => {
+    document.body.style.margin = "0";
+    document.body.style.backgroundColor = colors.background;
+  }, []);
+
   return (
     <div style={styles.page}>
       <div style={styles.card}>
         <h1 style={styles.title}>LinkedIn Zip Practice</h1>
 
-        {grid && <NumberGrid grid={grid} walls={walls} />}
+        {grid && <NumberGrid grid={grid} walls={walls} solution={path} />}
 
         <div style={styles.actions}>
           <Button variant="secondary" style={{ flex: 1 }} onClick={() => setShowAnswer((v) => !v)}>
@@ -96,6 +104,8 @@ function App() {
             New Game
           </Button>
         </div>
+
+        <HowToPlay />
 
         {showAnswer && (
           <div style={styles.solution}>

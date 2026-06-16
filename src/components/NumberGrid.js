@@ -16,7 +16,7 @@ const isAdjacent = ([r1, c1], [r2, c2]) =>
   Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
 
 // Interactive board: the player drags from 1 through every cell in order.
-export const NumberGrid = ({ grid, walls = new Set() }) => {
+export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
   const [path, setPath] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [message, setMessage] = useState("");
@@ -30,6 +30,11 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
   const totalHeight = grid.length * CELL_SIZE + (grid.length - 1) * GAP_SIZE;
 
   const hasWon = path.length > 0 && path.length === grid.length * grid.length;
+
+  // Rough difficulty label for the top-bar pill: fewer clues (and any walls)
+  // mean more deduction, so we call it harder.
+  const clueCount = grid.reduce((sum, row) => sum + row.filter((n) => n !== 0).length, 0);
+  const difficulty = walls.size > 0 || clueCount <= 6 ? "Hard" : clueCount <= 9 ? "Medium" : "Easy";
 
   // Tick the timer once per second while the game is active.
   useEffect(() => {
@@ -59,6 +64,17 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
   }, [grid]);
 
   const isInPath = (row, col) => path.some(([r, c]) => r === row && c === col);
+
+  // Re-derive the "current clue" from a path. Clues are a dense 1..k run in
+  // path order, so we walk the cells and bump the counter each time the next
+  // expected clue is hit. Used after Undo/Hint mutate the path wholesale.
+  const clueNumberForPath = (cells) => {
+    let n = 1;
+    for (const [r, c] of cells) {
+      if (grid[r][c] === n + 1) n += 1;
+    }
+    return n;
+  };
 
   const handleCellMouseDown = (row, col) => {
     if (hasWon) return;
@@ -145,6 +161,38 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
     setIsDragging(false);
   };
 
+  // Undo: drop the last cell off the path (one step), then re-derive the
+  // current clue from what's left.
+  const handleUndo = () => {
+    if (hasWon || path.length === 0) return;
+    const newPath = path.slice(0, -1);
+    setPath(newPath);
+    setCurrentNumber(clueNumberForPath(newPath));
+    setMessage("");
+    setIsDragging(false);
+  };
+
+  // Hint: snap the path to the longest prefix it shares with the real solution,
+  // then reveal one more correct cell. If the player has drifted off the
+  // solution, this also trims the wrong tail.
+  const handleHint = () => {
+    if (hasWon || !solution) return;
+    let match = 0;
+    while (
+      match < path.length &&
+      match < solution.length &&
+      path[match][0] === solution[match][0] &&
+      path[match][1] === solution[match][1]
+    ) {
+      match += 1;
+    }
+    const newPath = solution.slice(0, Math.min(match + 1, solution.length));
+    setPath(newPath);
+    setCurrentNumber(clueNumberForPath(newPath));
+    setMessage("");
+    setIsDragging(false);
+  };
+
   const handleShare = () => {
     const shareText = `I solved this zip in ${timeElapsed} seconds!\n\nPlay my exact board here:\n${window.location.href}`;
     navigator.clipboard.writeText(shareText).then(() => {
@@ -153,26 +201,59 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
     });
   };
 
-  const polylinePoints = path
-    .map(([r, c]) => {
-      const x = c * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2;
-      const y = r * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const cellCenter = (r, c) => [
+    c * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2,
+    r * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2,
+  ];
+
+  const polylinePoints = path.map(([r, c]) => cellCenter(r, c).join(",")).join(" ");
 
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {/* Top bar: difficulty pill (left), timer (center), Clear (right). */}
       <div
         style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          color: isTimerActive ? colors.primary : colors.success,
-          marginBottom: "4px",
-          fontVariantNumeric: "tabular-nums", // consistent digit width avoids jitter
+          width: totalWidth,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px",
         }}
       >
-        ⏱️ {formatTime(timeElapsed)}
+        <span
+          style={{
+            backgroundColor: colors.chip,
+            color: colors.text,
+            padding: "6px 14px",
+            borderRadius: radii.pill,
+            fontSize: "13px",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Difficulty <span style={{ color: colors.primaryLight }}>{difficulty}</span>
+        </span>
+
+        <span
+          style={{
+            flex: 1,
+            textAlign: "center",
+            fontSize: "16px",
+            fontWeight: 600,
+            color: isTimerActive ? colors.textMuted : colors.success,
+            fontVariantNumeric: "tabular-nums", // consistent digit width avoids jitter
+          }}
+        >
+          ⏱️ {formatTime(timeElapsed)}
+        </span>
+
+        <Button
+          variant="secondary"
+          onClick={handleClear}
+          style={{ padding: "6px 16px", fontSize: "14px" }}
+        >
+          Clear
+        </Button>
       </div>
 
       {/* Status banner stays reserved-height so the board doesn't shift. */}
@@ -191,28 +272,24 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
       </div>
 
       <div
-        style={{ position: "relative", width: totalWidth, height: totalHeight, touchAction: "none" }}
+        style={{
+          position: "relative",
+          width: totalWidth,
+          height: totalHeight,
+          touchAction: "none",
+          borderRadius: radii.md,
+          overflow: "hidden",
+          border: `1px solid ${colors.border}`,
+        }}
         onMouseLeave={handleMouseUp}
         onMouseUp={handleMouseUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
         onDragStart={(e) => e.preventDefault()}
       >
-        {/* Background layer: the 3D pipe tracing the player's path. */}
-        {path.length > 0 && (
-          <svg
-            width={totalWidth}
-            height={totalHeight}
-            style={{ position: "absolute", top: 0, left: 0, zIndex: 0, pointerEvents: "none" }}
-          >
-            <polyline points={polylinePoints} fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="26" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, 4)" />
-            <polyline points={polylinePoints} fill="none" stroke={colors.primaryDark} strokeWidth="24" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={polylinePoints} fill="none" stroke={colors.primary} strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={polylinePoints} fill="none" stroke={colors.primaryLight} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" transform="translate(-2, -2)" />
-          </svg>
-        )}
-
-        {/* Foreground layer: the interactive grid of cells. */}
+        {/* Layer 0: interactive cells. Always opaque, square-cornered and flush
+            (no border-radius) so they never vanish under the line and leave no
+            gaps where four corners meet. */}
         <div
           style={{
             display: "grid",
@@ -221,56 +298,90 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
             gap: `${GAP_SIZE}px`,
             userSelect: "none",
             position: "relative",
-            zIndex: 1,
+            zIndex: 0,
           }}
         >
           {grid.map((row, rowIdx) =>
-            row.map((num, colIdx) => {
-              const active = isInPath(rowIdx, colIdx);
-              return (
-                <div
-                  key={`${rowIdx}-${colIdx}`}
-                  data-row={rowIdx}
-                  data-col={colIdx}
-                  onMouseDown={() => handleCellMouseDown(rowIdx, colIdx)}
-                  onMouseEnter={() => handleCellMouseEnter(rowIdx, colIdx)}
-                  onTouchStart={() => handleCellMouseDown(rowIdx, colIdx)}
-                  style={{
-                    height: `${CELL_SIZE}px`,
-                    width: `${CELL_SIZE}px`,
-                    boxSizing: "border-box",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: active ? "transparent" : colors.surface,
-                    border: active ? "none" : `2px solid ${colors.border}`,
-                    borderRadius: radii.md,
-                    cursor: hasWon ? "default" : "pointer",
-                    transition: "background-color 0.1s ease-in-out",
-                  }}
-                >
-                  {num !== 0 && (
-                    <div
-                      style={{
-                        backgroundColor: active ? colors.surface : "transparent",
-                        color: active ? colors.primary : colors.text,
-                        borderRadius: "50%",
-                        width: "28px",
-                        height: "28px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                        boxShadow: active ? "0 2px 4px rgba(0,0,0,0.2)" : "none",
-                      }}
-                    >
-                      {num}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+            row.map((num, colIdx) => (
+              <div
+                key={`${rowIdx}-${colIdx}`}
+                data-row={rowIdx}
+                data-col={colIdx}
+                onMouseDown={() => handleCellMouseDown(rowIdx, colIdx)}
+                onMouseEnter={() => handleCellMouseEnter(rowIdx, colIdx)}
+                onTouchStart={() => handleCellMouseDown(rowIdx, colIdx)}
+                style={{
+                  height: `${CELL_SIZE}px`,
+                  width: `${CELL_SIZE}px`,
+                  boxSizing: "border-box",
+                  backgroundColor: colors.cell,
+                  border: `1px solid ${colors.border}`,
+                  cursor: hasWon ? "default" : "pointer",
+                }}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Layer 1: the player's path, a constant accent color. */}
+        {path.length > 1 && (
+          <svg
+            width={totalWidth}
+            height={totalHeight}
+            style={{ position: "absolute", top: 0, left: 0, zIndex: 1, pointerEvents: "none" }}
+          >
+            <polyline points={polylinePoints} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, 3)" />
+            <polyline points={polylinePoints} fill="none" stroke={colors.primary} strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+
+        {/* Layer 2: clue circles, sitting on top of the line like the real board. */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            display: "grid",
+            gridTemplateColumns: `repeat(${cols}, ${CELL_SIZE}px)`,
+            gridTemplateRows: `repeat(${cols}, ${CELL_SIZE}px)`,
+            gap: `${GAP_SIZE}px`,
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+        >
+          {grid.map((row, rowIdx) =>
+            row.map((num, colIdx) => (
+              <div
+                key={`${rowIdx}-${colIdx}`}
+                style={{
+                  height: `${CELL_SIZE}px`,
+                  width: `${CELL_SIZE}px`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {num !== 0 && (
+                  <div
+                    style={{
+                      backgroundColor: colors.clue,
+                      color: colors.clueText,
+                      borderRadius: "50%",
+                      width: "28px",
+                      height: "28px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    {num}
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
 
@@ -306,14 +417,37 @@ export const NumberGrid = ({ grid, walls = new Set() }) => {
         )}
       </div>
 
-      {/* Reserved-height slot so Clear/Share appearing never shifts the buttons below. */}
-      <div style={{ height: "44px", marginTop: "24px", display: "flex", alignItems: "center" }}>
-        {!hasWon && path.length > 0 && (
-          <Button variant="secondary" onClick={handleClear}>
-            Clear Path
-          </Button>
-        )}
+      {/* Undo / Hint row (fixed height so it never reflows). */}
+      <div
+        style={{
+          width: totalWidth,
+          display: "flex",
+          gap: "12px",
+          marginTop: "20px",
+          height: "44px",
+        }}
+      >
+        <Button
+          variant="subtle"
+          style={{ flex: 1 }}
+          onClick={handleUndo}
+          disabled={hasWon || path.length === 0}
+        >
+          Undo
+        </Button>
+        <Button
+          variant="secondary"
+          style={{ flex: 1 }}
+          onClick={handleHint}
+          disabled={hasWon || !solution}
+        >
+          Hint
+        </Button>
+      </div>
 
+      {/* Reserved-height slot so the Share button appearing on a win never
+          shifts the content below. */}
+      <div style={{ height: "44px", marginTop: "12px", display: "flex", alignItems: "center" }}>
         {hasWon && (
           <Button
             variant={copied ? "successFilled" : "success"}
