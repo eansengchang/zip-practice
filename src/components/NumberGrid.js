@@ -121,6 +121,25 @@ export const NumberGrid = ({ grid }) => {
 
   const handleMouseUp = () => setIsDragging(false);
 
+  // Touch dragging: mouseenter never fires on touch, so resolve the cell under
+  // the finger from its coordinates and feed it through the same enter logic.
+  const handleTouchMove = (e) => {
+    if (!isDragging || hasWon) return;
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cell = target && target.closest("[data-row]");
+    if (!cell) return;
+    handleCellMouseEnter(Number(cell.dataset.row), Number(cell.dataset.col));
+  };
+
+  // Wipe the current attempt without loading a different puzzle.
+  const handleClear = () => {
+    setPath([]);
+    setMessage("");
+    setCurrentNumber(1);
+    setIsDragging(false);
+  };
+
   const handleShare = () => {
     const shareText = `I solved this zip in ${timeElapsed} seconds!\n\nPlay my exact board here:\n${window.location.href}`;
     navigator.clipboard.writeText(shareText).then(() => {
@@ -167,9 +186,11 @@ export const NumberGrid = ({ grid }) => {
       </div>
 
       <div
-        style={{ position: "relative", width: totalWidth, height: totalHeight }}
+        style={{ position: "relative", width: totalWidth, height: totalHeight, touchAction: "none" }}
         onMouseLeave={handleMouseUp}
         onMouseUp={handleMouseUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
         onDragStart={(e) => e.preventDefault()}
       >
         {/* Background layer: the 3D pipe tracing the player's path. */}
@@ -204,8 +225,11 @@ export const NumberGrid = ({ grid }) => {
               return (
                 <div
                   key={`${rowIdx}-${colIdx}`}
+                  data-row={rowIdx}
+                  data-col={colIdx}
                   onMouseDown={() => handleCellMouseDown(rowIdx, colIdx)}
                   onMouseEnter={() => handleCellMouseEnter(rowIdx, colIdx)}
+                  onTouchStart={() => handleCellMouseDown(rowIdx, colIdx)}
                   style={{
                     height: `${CELL_SIZE}px`,
                     width: `${CELL_SIZE}px`,
@@ -246,15 +270,24 @@ export const NumberGrid = ({ grid }) => {
         </div>
       </div>
 
-      {hasWon && (
-        <Button
-          variant={copied ? "successFilled" : "success"}
-          onClick={handleShare}
-          style={{ marginTop: "24px", display: "flex", alignItems: "center", gap: "8px" }}
-        >
-          {copied ? "✅ Copied to Clipboard!" : "📤 Share Result"}
-        </Button>
-      )}
+      {/* Reserved-height slot so Clear/Share appearing never shifts the buttons below. */}
+      <div style={{ height: "44px", marginTop: "24px", display: "flex", alignItems: "center" }}>
+        {!hasWon && path.length > 0 && (
+          <Button variant="secondary" onClick={handleClear}>
+            Clear Path
+          </Button>
+        )}
+
+        {hasWon && (
+          <Button
+            variant={copied ? "successFilled" : "success"}
+            onClick={handleShare}
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            {copied ? "✅ Copied to Clipboard!" : "📤 Share Result"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

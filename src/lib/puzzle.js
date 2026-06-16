@@ -17,7 +17,7 @@ export const createGridFromPath = (path) => {
 
 // Backtracking solver: returns true iff exactly one Hamiltonian path satisfies
 // the clue numbers in `grid`, starting from `start` ([row, col, value]).
-const hasUniqueSolution = (start, grid) => {
+export const hasUniqueSolution = (start, grid) => {
   let solutions = 0;
   const currentPath = [start];
 
