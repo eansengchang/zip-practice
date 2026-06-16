@@ -13,6 +13,7 @@ export const colors = {
   textMuted: "rgba(0,0,0,0.6)",
   border: "#e6e9ec",
   gridBackground: "#faf9f7",
+  wall: "#33373d",
 };
 
 export const radii = {

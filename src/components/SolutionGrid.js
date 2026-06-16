@@ -1,7 +1,8 @@
 import { colors, radii } from "../theme";
+import { ALL_EDGES, edgeKey } from "../lib/walls";
 
 // Read-only SVG rendering of a completed path, used by the "Show Answer" view.
-export const SolutionGrid = ({ path, cellSize = 40, showGrid = true }) => {
+export const SolutionGrid = ({ path, walls = new Set(), cellSize = 40, showGrid = true }) => {
   if (!path) return null;
 
   const allX = path.map(([x]) => x);
@@ -41,6 +42,17 @@ export const SolutionGrid = ({ path, cellSize = 40, showGrid = true }) => {
         <polyline points={points} fill="none" stroke={colors.primary} strokeWidth={cellSize / 3} strokeLinecap="round" strokeLinejoin="round" />
         <polyline points={points} fill="none" stroke={colors.primaryLight} strokeWidth={cellSize / 8} strokeLinecap="round" strokeLinejoin="round" transform="translate(-2, -2)" />
       </g>
+      {/* Walls: thick segments on the shared cell borders (col -> x, row -> y). */}
+      {ALL_EDGES.map(([r1, c1, r2, c2], i) => {
+        if (!walls.has(edgeKey(r1, c1, r2, c2))) return null;
+        const [x1, y1, x2, y2] =
+          r1 === r2
+            ? [(c1 + 1) * cellSize, r1 * cellSize, (c1 + 1) * cellSize, (r1 + 1) * cellSize]
+            : [c1 * cellSize, (r1 + 1) * cellSize, (c1 + 1) * cellSize, (r1 + 1) * cellSize];
+        return (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={colors.wall} strokeWidth={cellSize / 6} strokeLinecap="round" />
+        );
+      })}
     </svg>
   );
 };

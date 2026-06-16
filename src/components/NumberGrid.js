@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { colors, radii } from "../theme";
+import { ALL_EDGES, edgeKey } from "../lib/walls";
 import { Button } from "./Button";
 
-const CELL_SIZE = 50;
-const GAP_SIZE = 6;
+const CELL_SIZE = 60
+const GAP_SIZE = 0;
 
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -15,7 +16,7 @@ const isAdjacent = ([r1, c1], [r2, c2]) =>
   Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
 
 // Interactive board: the player drags from 1 through every cell in order.
-export const NumberGrid = ({ grid }) => {
+export const NumberGrid = ({ grid, walls = new Set() }) => {
   const [path, setPath] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [message, setMessage] = useState("");
@@ -107,6 +108,10 @@ export const NumberGrid = ({ grid }) => {
 
     // Valid forward move into an adjacent cell.
     if (isAdjacent(last, [row, col])) {
+      // A wall on the shared edge blocks the move (handled silently, like a
+      // diagonal: the barrier is visible, so no error message is needed).
+      if (walls.has(edgeKey(last[0], last[1], row, col))) return;
+
       if (grid[row][col] === 0 || grid[row][col] === currentNumber + 1) {
         setPath([...path, [row, col]]);
         setMessage("");
@@ -268,6 +273,37 @@ export const NumberGrid = ({ grid }) => {
             })
           )}
         </div>
+
+        {/* Wall layer: thick segments on shared cell borders, above everything. */}
+        {walls.size > 0 && (
+          <svg
+            width={totalWidth}
+            height={totalHeight}
+            style={{ position: "absolute", top: 0, left: 0, zIndex: 2, pointerEvents: "none" }}
+          >
+            {ALL_EDGES.map(([r1, c1, r2, c2], i) => {
+              if (!walls.has(edgeKey(r1, c1, r2, c2))) return null;
+              const pitch = CELL_SIZE + GAP_SIZE;
+              // Same row -> shared vertical border; same column -> horizontal.
+              const [x1, y1, x2, y2] =
+                r1 === r2
+                  ? [(c1 + 1) * pitch, r1 * pitch, (c1 + 1) * pitch, (r1 + 1) * pitch]
+                  : [c1 * pitch, (r1 + 1) * pitch, (c1 + 1) * pitch, (r1 + 1) * pitch];
+              return (
+                <line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke={colors.wall}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </svg>
+        )}
       </div>
 
       {/* Reserved-height slot so Clear/Share appearing never shifts the buttons below. */}

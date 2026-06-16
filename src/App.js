@@ -52,6 +52,7 @@ const styles = {
 function App() {
   const [path, setPath] = useState(null);
   const [grid, setGrid] = useState(null);
+  const [walls, setWalls] = useState(null);
   const [showAnswer, setShowAnswer] = useState(false);
 
   // Loads a puzzle: from the URL hash when present (unless a new game is
@@ -64,14 +65,16 @@ function App() {
       if (saved) {
         setPath(saved.path);
         setGrid(saved.grid);
+        setWalls(saved.walls);
         return;
       }
     }
 
-    const { path: newPath, grid: newGrid } = generatePuzzle();
+    const { path: newPath, grid: newGrid, walls: newWalls } = generatePuzzle();
     setPath(newPath);
     setGrid(newGrid);
-    window.history.replaceState(null, "", `#${encodePuzzleToHash(newPath, newGrid)}`);
+    setWalls(newWalls);
+    window.history.replaceState(null, "", `#${encodePuzzleToHash(newPath, newGrid, newWalls)}`);
   }, []);
 
   useEffect(() => {
@@ -83,7 +86,7 @@ function App() {
       <div style={styles.card}>
         <h1 style={styles.title}>LinkedIn Zip Practice</h1>
 
-        {grid && <NumberGrid grid={grid} />}
+        {grid && <NumberGrid grid={grid} walls={walls} />}
 
         <div style={styles.actions}>
           <Button variant="secondary" style={{ flex: 1 }} onClick={() => setShowAnswer((v) => !v)}>
@@ -97,7 +100,7 @@ function App() {
         {showAnswer && (
           <div style={styles.solution}>
             <h3 style={styles.solutionLabel}>Solution Path</h3>
-            <SolutionGrid path={path} />
+            <SolutionGrid path={path} walls={walls} />
           </div>
         )}
       </div>
