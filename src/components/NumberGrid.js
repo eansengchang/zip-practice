@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { colors, radii } from "../theme";
-import { ALL_EDGES, edgeKey } from "../lib/walls";
+import { allEdges, edgeKey } from "../lib/walls";
 import { Button } from "./Button";
 
-const CELL_SIZE = 60
+// The board always renders at roughly this width; the cell size is derived from
+// the grid size so 4x4 / 6x6 / 8x8 all fit the same card (90 / 60 / 45 px).
+const BOARD_TARGET = 360;
 const GAP_SIZE = 0;
 
 const formatTime = (seconds) => {
@@ -25,16 +27,23 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isTimerActive, setIsTimerActive] = useState(true);
 
+  const size = grid.length;
   const cols = grid[0].length;
+  const CELL_SIZE = Math.floor(BOARD_TARGET / size);
+  // Visual elements scale with the cell so smaller (harder) grids stay legible.
+  const clueDiameter = Math.round(CELL_SIZE * 0.47);
+  const clueFont = Math.round(CELL_SIZE * 0.27);
+  const pathStroke = Math.round(CELL_SIZE * 0.37);
+  const wallStroke = Math.max(4, Math.round(CELL_SIZE * 0.1));
+
   const totalWidth = cols * CELL_SIZE + (cols - 1) * GAP_SIZE;
   const totalHeight = grid.length * CELL_SIZE + (grid.length - 1) * GAP_SIZE;
 
   const hasWon = path.length > 0 && path.length === grid.length * grid.length;
 
-  // Rough difficulty label for the top-bar pill: fewer clues (and any walls)
-  // mean more deduction, so we call it harder.
-  const clueCount = grid.reduce((sum, row) => sum + row.filter((n) => n !== 0).length, 0);
-  const difficulty = walls.size > 0 || clueCount <= 6 ? "Hard" : clueCount <= 9 ? "Medium" : "Easy";
+  // Difficulty label for the top-bar pill is the grid size: 4 -> Easy,
+  // 6 -> Medium, 8 -> Hard.
+  const difficulty = size <= 4 ? "Easy" : size >= 8 ? "Hard" : "Medium";
 
   // Tick the timer once per second while the game is active.
   useEffect(() => {
@@ -330,8 +339,8 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
             height={totalHeight}
             style={{ position: "absolute", top: 0, left: 0, zIndex: 1, pointerEvents: "none" }}
           >
-            <polyline points={polylinePoints} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, 3)" />
-            <polyline points={polylinePoints} fill="none" stroke={colors.primary} strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={polylinePoints} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={pathStroke} strokeLinecap="round" strokeLinejoin="round" transform="translate(0, 3)" />
+            <polyline points={polylinePoints} fill="none" stroke={colors.primary} strokeWidth={pathStroke} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
 
@@ -367,12 +376,12 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
                       backgroundColor: colors.clue,
                       color: colors.clueText,
                       borderRadius: "50%",
-                      width: "28px",
-                      height: "28px",
+                      width: `${clueDiameter}px`,
+                      height: `${clueDiameter}px`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "16px",
+                      fontSize: `${clueFont}px`,
                       fontWeight: 700,
                       boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
                     }}
@@ -392,7 +401,7 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
             height={totalHeight}
             style={{ position: "absolute", top: 0, left: 0, zIndex: 2, pointerEvents: "none" }}
           >
-            {ALL_EDGES.map(([r1, c1, r2, c2], i) => {
+            {allEdges(size).map(([r1, c1, r2, c2], i) => {
               if (!walls.has(edgeKey(r1, c1, r2, c2))) return null;
               const pitch = CELL_SIZE + GAP_SIZE;
               // Same row -> shared vertical border; same column -> horizontal.
@@ -408,7 +417,7 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
                   x2={x2}
                   y2={y2}
                   stroke={colors.wall}
-                  strokeWidth="6"
+                  strokeWidth={wallStroke}
                   strokeLinecap="round"
                 />
               );

@@ -38,6 +38,15 @@ var n = (xmax + 1) * (ymax + 1);
 var left_end = true;
 var must_fill = true;
 
+// Set the lattice to a `size` x `size` grid before generating. The algorithm
+// reads (xmax+1)*(ymax+1) directly, so updating these module globals is all
+// that is needed; the algorithm itself is left untouched.
+export function setLatticeSize(size) {
+  xmax = size - 1;
+  ymax = size - 1;
+  n = (xmax + 1) * (ymax + 1);
+}
+
 function inSublattice(x, y) {
   if (x < 0) return false;
   if (x > xmax) return false;
