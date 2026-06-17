@@ -323,7 +323,7 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
                   height: `${CELL_SIZE}px`,
                   width: `${CELL_SIZE}px`,
                   boxSizing: "border-box",
-                  backgroundColor: colors.cell,
+                  backgroundColor: num === 1 ? colors.cellStart : colors.cell,
                   border: `1px solid ${colors.border}`,
                   cursor: hasWon ? "default" : "pointer",
                 }}

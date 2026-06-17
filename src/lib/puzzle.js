@@ -22,7 +22,32 @@ export const createGridFromPath = (path, size) => {
 // reported via `capped` and is treated conservatively by callers (never assumed
 // unique). Effect: 8x8 boards keep as many clues as uniqueness can be *cheaply*
 // proven for. Smaller grids are never capped, so their behavior is unchanged.
-const LARGE_GRID_NODE_CAP = 80000;
+//
+// Sized so that a typical 8x8 board generates in ~1s. The incremental-visited /
+// precomputed-adjacency solver makes each node cheap enough that this cap (vs.
+// the old 80k) buys sparser, more-walled boards while keeping generation snappy;
+// raising it further trades seconds of latency for marginally sparser boards.
+const LARGE_GRID_NODE_CAP = 1800000;
+
+// Wall-aware adjacency, built ONCE per solve instead of re-deriving neighbors
+// (and allocating an edgeKey string) at every node. `adj[cell]` lists the cell
+// indices reachable from `cell` — in-bounds and not across a wall — where a cell
+// index is `r * size + c`. Neighbor order is up, down, left, right to match the
+// original traversal, so the same first/counterexample solutions are returned.
+const buildAdjacency = (size, walls) => {
+  const adj = new Array(size * size);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const list = [];
+      if (r > 0 && !walls.has(edgeKey(r, c, r - 1, c))) list.push((r - 1) * size + c);
+      if (r < size - 1 && !walls.has(edgeKey(r, c, r + 1, c))) list.push((r + 1) * size + c);
+      if (c > 0 && !walls.has(edgeKey(r, c, r, c - 1))) list.push(r * size + c - 1);
+      if (c < size - 1 && !walls.has(edgeKey(r, c, r, c + 1))) list.push(r * size + c + 1);
+      adj[r * size + c] = list;
+    }
+  }
+  return adj;
+};
 
 // Backtracking enumerator: returns up to `limit` Hamiltonian paths that satisfy
 // the clue numbers in `grid`, start from `start` ([row, col, value]), and never
@@ -30,61 +55,64 @@ const LARGE_GRID_NODE_CAP = 80000;
 // found. The grid is always full (size x size), so the size is read from it.
 // Returns { solutions, capped }: `solutions` is an array of [row, col]-cell
 // paths; `capped` is true if the search hit the node ceiling before completing.
+//
+// Hot-path note: visited cells are tracked with an O(1) `visited` array kept in
+// sync on push/pop (not an O(depth) rescan per node), neighbors come from the
+// precomputed adjacency, and the clue grid is flattened to a cell-indexed array,
+// so the inner loop is pure integer work with no per-node string allocation.
 export const findSolutions = (start, grid, walls = new Set(), limit = 2) => {
   const size = grid.length;
+  const total = size * size;
   const cap = size >= 8 ? LARGE_GRID_NODE_CAP : Infinity;
+
+  const adj = buildAdjacency(size, walls);
+  const clue = new Array(total);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) clue[r * size + c] = grid[r][c];
+  }
+
   const solutions = [];
-  const currentPath = [start];
+  const visited = new Uint8Array(total);
+  const pathCells = new Int32Array(total);
   let nodes = 0;
   let capped = false;
 
-  const backtrack = () => {
+  const startCell = start[0] * size + start[1];
+  visited[startCell] = 1;
+  pathCells[0] = startCell;
+
+  // `depth` = cells placed so far; `value` = the highest clue number reached.
+  const backtrack = (depth, value) => {
     if (solutions.length >= limit || capped) return;
     if (++nodes > cap) {
       capped = true;
       return;
     }
 
-    if (currentPath.length === size * size) {
-      solutions.push(currentPath.map(([r, c]) => [r, c]));
+    if (depth === total) {
+      const sol = new Array(total);
+      for (let i = 0; i < total; i++) {
+        const cell = pathCells[i];
+        sol[i] = [Math.floor(cell / size), cell % size];
+      }
+      solutions.push(sol);
       return;
     }
 
-    const seenPaths = currentPath.map((x) => size * x[0] + x[1]);
-    const [currentX, currentY, n] = currentPath[currentPath.length - 1];
+    for (const next of adj[pathCells[depth - 1]]) {
+      if (visited[next]) continue;
+      const checkPoint = clue[next];
+      // Reachable only if unnumbered or carrying the next clue in sequence.
+      if (checkPoint !== 0 && checkPoint !== value + 1) continue;
 
-    let potentialNeighbors = [];
-    if (currentX > 0) potentialNeighbors.push([currentX - 1, currentY]);
-    if (currentX < size - 1) potentialNeighbors.push([currentX + 1, currentY]);
-    if (currentY > 0) potentialNeighbors.push([currentX, currentY - 1]);
-    if (currentY < size - 1) potentialNeighbors.push([currentX, currentY + 1]);
-
-    potentialNeighbors = potentialNeighbors.filter(
-      (x) =>
-        !seenPaths.includes(size * x[0] + x[1]) &&
-        !walls.has(edgeKey(currentX, currentY, x[0], x[1]))
-    );
-
-    const neighbors = [];
-    for (const neighbor of potentialNeighbors) {
-      const checkPoint = grid[neighbor[0]][neighbor[1]];
-      if (checkPoint === n + 1 || checkPoint === 0) {
-        neighbors.push([
-          neighbor[0],
-          neighbor[1],
-          checkPoint === 0 ? n : checkPoint,
-        ]);
-      }
-    }
-
-    for (const neighbor of neighbors) {
-      currentPath.push(neighbor);
-      backtrack();
-      currentPath.pop();
+      visited[next] = 1;
+      pathCells[depth] = next;
+      backtrack(depth + 1, checkPoint === 0 ? value : checkPoint);
+      visited[next] = 0;
       if (solutions.length >= limit || capped) return;
     }
   };
-  backtrack();
+  backtrack(1, start[2]);
 
   return { solutions, capped };
 };

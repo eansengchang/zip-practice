@@ -10,6 +10,7 @@ export const colors = {
   surface: "#161719", // raised panels: the main card, the how-to-play card
   chip: "#26272b", // pills + subtle buttons (a notch lighter than surface)
   cell: "#050506", // grid cell fill; gridlines (border) define the cells
+  cellStart: "#143524", // start cell ("1") fill — a green tint so it's easy to spot
   primary: "#4f8ff7", // accent + player's path (brightened for a dark bg)
   primaryDark: "#2f6fd0",
   primaryLight: "#7eb0fb",

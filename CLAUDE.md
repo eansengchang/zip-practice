@@ -116,9 +116,13 @@ Logic, components, and styling are deliberately separated:
   false). This never makes a board falsely "unique" — uniqueness is only ever
   *accepted* from a completed search, so every generated board (all sizes) is
   genuinely uniquely solvable. The cap only limits *how sparse* 8×8 gets: clue
-  removal stops once uniqueness can no longer be cheaply proven (≈16–25 clues).
-  Don't raise the cap to chase sparser/more-walled 8×8 boards — measured, it just
-  makes generation slower with no real gain.
+  removal stops once uniqueness can no longer be cheaply proven. The cap is
+  **tuned to the solver's speed**, not a fixed difficulty: it's sized so a typical
+  8×8 board generates in ~1s. The current value (`1_800_000`) assumes the fast
+  solver (incremental visited array + precomputed wall-aware adjacency); the old
+  80k value predates it. If you change the solver's per-node cost, re-benchmark
+  and retune this — higher caps buy sparser/more-walled boards at the cost of
+  generation latency, lower caps the reverse.
 - **Generator invariants (all sizes), guaranteed and tested:** the **start and
   end cells are always clued**, and there are **always ≥ `minClues(size)` clues**
   (`max(4, round(size²·0.18))` → 4 / 6 / 12 for 4×4 / 6×6 / 8×8). The floor
