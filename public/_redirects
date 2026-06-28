@@ -1,0 +1,4 @@
+# Built with homepage="/zip-practice", so assets are referenced under /zip-practice/*.
+# This rule lets the standalone zip-practice.netlify.app site keep working by
+# mapping those prefixed paths back to the real files at the deploy root.
+/zip-practice/*  /:splat  200
