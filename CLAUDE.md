@@ -22,6 +22,28 @@ CI=true npm run build     # production build
 > when `CI` is set, and `npm test` without it starts an interactive watcher.
 > Always run them with `CI=true` for a non-interactive, fail-on-warning check.
 
+## Deployment
+
+Hosted on **Netlify**, and reachable two ways from the same deploy:
+
+- **Standalone:** `https://zip-practice.netlify.app/`.
+- **Proxied under the portfolio:** `https://eansengchang.com/zip-practice` — the
+  personal-website repo has a Netlify status-`200` rewrite that proxies that path to
+  this deploy (the URL bar stays on `eansengchang.com`).
+
+For both to work, production assets must be referenced under the `/zip-practice`
+path, so the **`build` script sets `PUBLIC_URL=/zip-practice`** (`npm run build` →
+`PUBLIC_URL=/zip-practice react-scripts build`). Consequences to keep in mind:
+
+- Don't move that prefix into `homepage` — that would also push the **dev** server to
+  `localhost:3000/zip-practice`. Keeping it in the build script leaves `npm start` at
+  the root. Conversely, don't drop the prefix, or the proxied site's assets 404.
+- The built `index.html` therefore points at `/zip-practice/static/...`, which is wrong
+  for *this* deploy's own root. `public/_redirects` (`/zip-practice/*  /:splat  200`)
+  maps those prefixed paths back to the real files so the standalone URL still works.
+- Changing the path segment means updating it in three places together: this build
+  script, this repo's `public/_redirects`, and the personal-website `public/_redirects`.
+
 ## Architecture
 
 Logic, components, and styling are deliberately separated:

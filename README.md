@@ -27,7 +27,25 @@ It correctly bundles React in production mode and optimizes the build for the be
 The build is minified and the filenames include the hashes.\
 Your app is ready to be deployed!
 
+> This script sets `PUBLIC_URL=/zip-practice` so production assets are referenced
+> under the `/zip-practice` path (needed for the deployment described below). The
+> dev server (`npm start`) is unaffected and still runs at the root.
+
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+## Deployment
+
+Hosted on Netlify and reachable two ways from the same build:
+
+- **Standalone:** https://zip-practice.netlify.app
+- **Under the portfolio:** https://eansengchang.com/zip-practice — proxied via a
+  Netlify status-`200` rewrite in the personal-website repo, so the URL bar stays on
+  `eansengchang.com`.
+
+The `/zip-practice` base path is wired through three files that must stay in sync:
+the `build` script's `PUBLIC_URL` (above), this repo's `public/_redirects` (keeps the
+standalone URL working despite the prefix), and the personal-website `public/_redirects`
+(the proxy). See `CLAUDE.md` for the full rationale.
 
 ### `npm run eject`
 
