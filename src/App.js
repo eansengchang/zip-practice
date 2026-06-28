@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { NumberGrid } from "./components/NumberGrid";
-import { SolutionGrid } from "./components/SolutionGrid";
 import { HowToPlay } from "./components/HowToPlay";
 import { Button } from "./components/Button";
 import { generatePuzzle } from "./lib/puzzle";
@@ -19,45 +18,39 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    padding: "40px 20px",
+    padding: "16px 12px 40px",
     fontFamily: fonts.sans,
   },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
     boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.5)",
-    padding: "32px",
+    padding: "20px",
     width: "100%",
-    maxWidth: "450px",
+    maxWidth: "420px",
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
   },
   title: {
-    fontSize: "24px",
+    fontSize: "20px",
     fontWeight: 600,
     color: colors.text,
-    margin: "0 0 24px 0",
+    margin: "0 0 14px 0",
   },
   difficultyRow: {
     display: "flex",
     gap: "8px",
     width: "100%",
-    marginBottom: "20px",
+    marginBottom: "14px",
   },
   actions: {
     display: "flex",
-    gap: "16px",
+    gap: "12px",
     width: "100%",
-    marginTop: "24px",
+    marginTop: "12px",
     justifyContent: "center",
-  },
-  solution: { marginTop: "32px" },
-  solutionLabel: {
-    fontSize: "14px",
-    color: colors.textMuted,
-    marginBottom: "12px",
-    textAlign: "center",
   },
 };
 
@@ -122,7 +115,9 @@ function App() {
           ))}
         </div>
 
-        {grid && <NumberGrid grid={grid} walls={walls} solution={path} />}
+        {grid && (
+          <NumberGrid grid={grid} walls={walls} solution={path} showAnswer={showAnswer} />
+        )}
 
         <div style={styles.actions}>
           <Button variant="secondary" style={{ flex: 1 }} onClick={() => setShowAnswer((v) => !v)}>
@@ -134,13 +129,6 @@ function App() {
         </div>
 
         <HowToPlay />
-
-        {showAnswer && (
-          <div style={styles.solution}>
-            <h3 style={styles.solutionLabel}>Solution Path</h3>
-            <SolutionGrid path={path} walls={walls} />
-          </div>
-        )}
       </div>
     </div>
   );

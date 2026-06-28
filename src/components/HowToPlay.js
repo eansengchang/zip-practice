@@ -48,16 +48,16 @@ const Step = ({ glyph, label }) => (
 
 // Collapsible explainer card, mirroring LinkedIn Zip's "How to play" panel.
 export const HowToPlay = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div
       style={{
         width: "100%",
-        marginTop: "24px",
+        marginTop: "16px",
         backgroundColor: colors.chip,
         borderRadius: radii.md,
-        padding: "16px 20px",
+        padding: "14px 20px",
       }}
     >
       <button

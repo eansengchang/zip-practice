@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { colors, radii } from "../theme";
 import { allEdges, edgeKey } from "../lib/walls";
 import { Button } from "./Button";
 
-// The board always renders at roughly this width; the cell size is derived from
-// the grid size so 4x4 / 6x6 / 8x8 all fit the same card (90 / 60 / 45 px).
+// The board renders at most this wide, but shrinks to fit narrow viewports
+// (phones) so it never overflows the card. The cell size is derived from the
+// grid size so 4x4 / 6x6 / 8x8 all fit the same card.
 const BOARD_TARGET = 360;
 const GAP_SIZE = 0;
 
@@ -18,7 +19,7 @@ const isAdjacent = ([r1, c1], [r2, c2]) =>
   Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
 
 // Interactive board: the player drags from 1 through every cell in order.
-export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
+export const NumberGrid = ({ grid, walls = new Set(), solution = null, showAnswer = false }) => {
   const [path, setPath] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [message, setMessage] = useState("");
@@ -27,9 +28,30 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isTimerActive, setIsTimerActive] = useState(true);
 
+  // Available width, measured from the outer container, so the board can shrink
+  // to fit a phone instead of overflowing the card at a fixed 360px.
+  const containerRef = useRef(null);
+  const [boardWidth, setBoardWidth] = useState(BOARD_TARGET);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setBoardWidth(Math.min(BOARD_TARGET, w));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const size = grid.length;
   const cols = grid[0].length;
-  const CELL_SIZE = Math.floor(BOARD_TARGET / size);
+  const CELL_SIZE = Math.floor(boardWidth / size);
   // Visual elements scale with the cell so smaller (harder) grids stay legible.
   const clueDiameter = Math.round(CELL_SIZE * 0.47);
   const clueFont = Math.round(CELL_SIZE * 0.27);
@@ -40,10 +62,6 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
   const totalHeight = grid.length * CELL_SIZE + (grid.length - 1) * GAP_SIZE;
 
   const hasWon = path.length > 0 && path.length === grid.length * grid.length;
-
-  // Difficulty label for the top-bar pill is the grid size: 4 -> Easy,
-  // 6 -> Medium, 8 -> Hard.
-  const difficulty = size <= 4 ? "Easy" : size >= 8 ? "Hard" : "Medium";
 
   // Tick the timer once per second while the game is active.
   useEffect(() => {
@@ -216,37 +234,25 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
   ];
 
   const polylinePoints = path.map(([r, c]) => cellCenter(r, c).join(",")).join(" ");
+  const solutionPoints = solution
+    ? solution.map(([r, c]) => cellCenter(r, c).join(",")).join(" ")
+    : "";
 
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      {/* Top bar: difficulty pill (left), timer (center), Clear (right). */}
+    <div ref={containerRef} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {/* Top bar: timer (left), Clear (right). Difficulty lives in the selector
+          above the board, so it's not repeated here. */}
       <div
         style={{
           width: totalWidth,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "12px",
+          marginBottom: "8px",
         }}
       >
         <span
           style={{
-            backgroundColor: colors.chip,
-            color: colors.text,
-            padding: "6px 14px",
-            borderRadius: radii.pill,
-            fontSize: "13px",
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Difficulty <span style={{ color: colors.primaryLight }}>{difficulty}</span>
-        </span>
-
-        <span
-          style={{
-            flex: 1,
-            textAlign: "center",
             fontSize: "16px",
             fontWeight: 600,
             color: isTimerActive ? colors.textMuted : colors.success,
@@ -268,8 +274,8 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
       {/* Status banner stays reserved-height so the board doesn't shift. */}
       <div
         style={{
-          height: "24px",
-          marginBottom: "16px",
+          height: "20px",
+          marginBottom: "8px",
           fontSize: "14px",
           fontWeight: 600,
           color: message.includes("Great work") ? colors.success : colors.error,
@@ -341,6 +347,26 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
           >
             <polyline points={polylinePoints} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={pathStroke} strokeLinecap="round" strokeLinejoin="round" transform="translate(0, 3)" />
             <polyline points={polylinePoints} fill="none" stroke={colors.primary} strokeWidth={pathStroke} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+
+        {/* Answer overlay: the full solution drawn translucently on top of the
+            board (Show Answer), so it reads as a guide over the player's grid. */}
+        {showAnswer && solution && (
+          <svg
+            width={totalWidth}
+            height={totalHeight}
+            style={{ position: "absolute", top: 0, left: 0, zIndex: 2, pointerEvents: "none" }}
+          >
+            <polyline
+              points={solutionPoints}
+              fill="none"
+              stroke={colors.primaryLight}
+              strokeWidth={pathStroke}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.55}
+            />
           </svg>
         )}
 
@@ -432,8 +458,8 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
           width: totalWidth,
           display: "flex",
           gap: "12px",
-          marginTop: "20px",
-          height: "44px",
+          marginTop: "12px",
+          height: "40px",
         }}
       >
         <Button
@@ -456,7 +482,7 @@ export const NumberGrid = ({ grid, walls = new Set(), solution = null }) => {
 
       {/* Reserved-height slot so the Share button appearing on a win never
           shifts the content below. */}
-      <div style={{ height: "44px", marginTop: "12px", display: "flex", alignItems: "center" }}>
+      <div style={{ height: "40px", marginTop: "10px", display: "flex", alignItems: "center" }}>
         {hasWon && (
           <Button
             variant={copied ? "successFilled" : "success"}
