@@ -13,6 +13,7 @@ export const colors = {
   cellStart: "#143524", // start cell ("1") fill — a green tint so it's easy to spot
   primary: "#4f8ff7", // accent + player's path (brightened for a dark bg)
   primaryDark: "#2f6fd0",
+  primaryDeep: "#0a66c2", // LinkedIn blue; deep stop of the brand-mark gradient
   primaryLight: "#7eb0fb",
   success: "#4caf78",
   error: "#ff6b6b",

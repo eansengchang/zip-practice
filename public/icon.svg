@@ -1,0 +1,27 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- LinkedIn "Zip" style app icon: a single continuous path weaving through a
+       grid, starting at the numbered "1" dot. Matches the app's blue accent. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f8ff7"/>
+      <stop offset="1" stop-color="#0a66c2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded tile -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#tile)"/>
+
+  <!-- the winding path -->
+  <path d="M 150 150 H 362 V 256 H 150 V 362 H 362"
+        fill="none" stroke="#ffffff" stroke-width="40"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- start node with the "1" clue -->
+  <circle cx="150" cy="150" r="40" fill="#ffffff"/>
+  <text x="150" y="151" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="48" font-weight="700" fill="#0a66c2">1</text>
+
+  <!-- end node -->
+  <circle cx="362" cy="362" r="30" fill="#ffffff"/>
+</svg>

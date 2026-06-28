@@ -44,6 +44,29 @@ path, so the **`build` script sets `PUBLIC_URL=/zip-practice`** (`npm run build`
 - Changing the path segment means updating it in three places together: this build
   script, this repo's `public/_redirects`, and the personal-website `public/_redirects`.
 
+## Icons
+
+`public/icon.svg` is the **source of truth** for the app's branding (a
+LinkedIn-Zip-style mark: one path weaving through a grid, starting at the "1"
+clue). The other icon assets are **generated from it**, not hand-edited:
+
+- `public/favicon.ico` (multi-size), `public/logo192.png`, `public/logo512.png`
+  — referenced by `index.html` / `manifest.json`. There's no `convert`/`magick`
+  on the box; regenerate with `rsvg-convert` for the PNGs and Pillow for the
+  `.ico`:
+
+  ```bash
+  cd public
+  rsvg-convert -w 512 -h 512 icon.svg -o logo512.png
+  rsvg-convert -w 192 -h 192 icon.svg -o logo192.png
+  rsvg-convert -w 256 -h 256 icon.svg -o /tmp/fav.png
+  python3 -c "from PIL import Image; Image.open('/tmp/fav.png').convert('RGBA').save('favicon.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+  ```
+
+- `src/components/ZipMark.js` re-draws the same artwork **inline** (theme-driven
+  colors) for the in-app header. It is a separate hand-kept copy — update it
+  alongside `icon.svg` so the favicon and the on-page mark stay identical.
+
 ## Architecture
 
 Logic, components, and styling are deliberately separated:
@@ -73,6 +96,9 @@ Logic, components, and styling are deliberately separated:
   - `SolutionGrid.js` — read-only SVG of the answer ("Show Answer"), incl. walls.
     Derives `size` from the path bounds and scales similarly.
   - `Button.js` — shared pill button; pick a look with `variant`.
+  - `ZipMark.js` — small inline-SVG brand mark (the LinkedIn-Zip app icon),
+    shown beside the title. It **mirrors `public/icon.svg`** (see "Icons"
+    below), so if you change the artwork, change both.
 - `src/App.js` — layout + orchestration only. Holds the `difficulty` state and
   the Easy/Medium/Hard selector (picking one starts a new game at that `size`);
   loads from the URL or generates, and syncs `difficulty` from a loaded board.

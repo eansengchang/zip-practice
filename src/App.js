@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { NumberGrid } from "./components/NumberGrid";
 import { HowToPlay } from "./components/HowToPlay";
 import { Button } from "./components/Button";
+import { ZipMark } from "./components/ZipMark";
 import { generatePuzzle } from "./lib/puzzle";
 import { decodePuzzleFromHash, encodePuzzleToHash } from "./lib/urlCodec";
 import { DIFFICULTIES } from "./lib/constants";
@@ -33,11 +34,17 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
   },
+  titleRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    margin: "0 0 14px 0",
+  },
   title: {
     fontSize: "20px",
     fontWeight: 600,
     color: colors.text,
-    margin: "0 0 14px 0",
+    margin: 0,
   },
   difficultyRow: {
     display: "flex",
@@ -100,7 +107,10 @@ function App() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>LinkedIn Zip Practice</h1>
+        <div style={styles.titleRow}>
+          <ZipMark size={26} />
+          <h1 style={styles.title}>LinkedIn Zip Practice</h1>
+        </div>
 
         <div style={styles.difficultyRow}>
           {Object.keys(DIFFICULTIES).map((key) => (
