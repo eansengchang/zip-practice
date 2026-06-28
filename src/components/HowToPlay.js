@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { colors, radii } from "../theme";
 
 // Three numbered dots joined by a line — the "connect the dots in order" glyph.
@@ -46,48 +47,100 @@ const Step = ({ glyph, label }) => (
   </div>
 );
 
-// Collapsible explainer card, mirroring LinkedIn Zip's "How to play" panel.
+// "How to play" lives in a modal rather than an inline drop-down so opening it
+// never grows the page height (which otherwise pushes the layout into a scroll).
 export const HowToPlay = () => {
   const [open, setOpen] = useState(false);
 
+  // Close on Escape while the modal is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
-    <div
-      style={{
-        width: "100%",
-        marginTop: "16px",
-        backgroundColor: colors.chip,
-        borderRadius: radii.md,
-        padding: "14px 20px",
-      }}
-    >
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
         style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          marginTop: "16px",
           background: "none",
           border: "none",
-          padding: 0,
+          padding: "4px",
           cursor: "pointer",
-          color: colors.text,
-          fontSize: "15px",
+          color: colors.textMuted,
+          fontSize: "14px",
           fontWeight: 600,
+          textDecoration: "underline",
+          textUnderlineOffset: "3px",
         }}
       >
         How to play
-        <span style={{ fontSize: "12px", color: colors.textMuted, transform: open ? "none" : "rotate(180deg)" }}>
-          ▲
-        </span>
       </button>
 
-      {open && (
-        <div style={{ display: "flex", gap: "16px", marginTop: "18px" }}>
-          <Step glyph={<ConnectDots />} label="Connect the dots in order" />
-          <Step glyph={<FillCells />} label="Fill every cell" />
-        </div>
-      )}
-    </div>
+      {open &&
+        createPortal(
+          <div
+            onClick={() => setOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+              zIndex: 100,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.md,
+                padding: "24px",
+                width: "100%",
+                maxWidth: "360px",
+                boxSizing: "border-box",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.5)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "20px",
+                }}
+              >
+                <span style={{ fontSize: "16px", fontWeight: 600, color: colors.text }}>How to play</span>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "4px",
+                    cursor: "pointer",
+                    color: colors.textMuted,
+                    fontSize: "18px",
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: "16px" }}>
+                <Step glyph={<ConnectDots />} label="Connect the dots in order" />
+                <Step glyph={<FillCells />} label="Fill every cell" />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 };

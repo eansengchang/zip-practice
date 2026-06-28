@@ -16,10 +16,15 @@ const styles = {
   page: {
     backgroundColor: colors.background,
     minHeight: "100vh",
+    // Include the padding within the 100vh; with the default content-box the
+    // padding stacks on top of 100vh and the page always overflows by ~56px,
+    // which is the "bit of scroll" we never want.
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    padding: "16px 12px 40px",
+    justifyContent: "center",
+    padding: "16px 12px",
     fontFamily: fonts.sans,
   },
   card: {
